@@ -1,0 +1,210 @@
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>MOSKOW Timeline Review Board</title>
+<style>
+*{box-sizing:border-box;}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#d6d6d6;font-family:Arial,sans-serif;}
+#viewport{width:100vw;height:100vh;overflow:hidden;position:relative;cursor:grab;}
+#viewport.dragging{cursor:grabbing;}
+#canvas{position:absolute;left:0;top:0;transform-origin:0 0;padding:40px;}
+.board{display:flex;flex-direction:column;gap:42px;width:max-content;}
+.project{background:#efefef;border:1px solid #c8c8c8;border-radius:14px;padding:16px;width:max-content;}
+.project-title{font-size:22px;font-weight:bold;margin-bottom:18px;}
+.timeline{display:flex;flex-direction:row;gap:0;align-items:flex-start;width:max-content;}
+.scene{width:220px;flex-shrink:0;position:relative;padding-right:4px;}
+.scene-header{text-align:center;font-size:14px;font-weight:bold;margin-bottom:8px;}
+.gif{width:220px;position:relative;cursor:pointer;margin-bottom:6px;}
+.gif img{width:100%;display:block;}
+
+.preview{
+    width:220px;
+    display:flex;
+    flex-direction:row;
+    gap:0;
+    align-items:flex-start;
+    background:#111;
+}
+
+.preview img{
+    width:110px;
+    height:auto;
+    object-fit:contain;
+    display:block;
+    background:#111;
+}
+
+.crossed{opacity:0.45;}
+.crossed::before,.crossed::after{content:"";position:absolute;left:-10%;top:50%;width:120%;height:5px;background:red;z-index:999;pointer-events:none;}
+.crossed::before{transform:rotate(26deg);}
+.crossed::after{transform:rotate(-26deg);}
+.toolbar{position:fixed;top:16px;left:16px;z-index:9999;background:white;border-radius:12px;padding:12px;display:flex;gap:12px;align-items:center;box-shadow:0 2px 12px rgba(0,0,0,0.15);}
+button{border:none;border-radius:8px;padding:10px 14px;font-weight:bold;cursor:pointer;}
+.zoom{min-width:70px;text-align:center;font-weight:bold;}
+</style>
+</head>
+<body>
+<div class="toolbar">
+<button onclick="zoomIn()">+</button>
+<button onclick="zoomOut()">-</button>
+<button onclick="resetView()">RESET VIEW</button>
+<button onclick="saveState()">SAVE</button>
+<div class="zoom" id="zoomLabel">100%</div>
+</div>
+
+<div id="viewport"><div id="canvas"><div class="board" id="board"></div></div></div>
+
+<script>
+const projects=[
+"Main_dostoevskaya_06",
+"Main_Fotonica_v12 21.05",
+"Main_Kotelnaya_v8",
+"Main_Sklif_V7",
+"Main_techcollege_04",
+"Main_Verf_v5",
+"Stationary_Animatic_v001",
+"Main_depo_v5_1"
+];
+
+const state=JSON.parse(localStorage.getItem("timeline_review_state")||"{}");
+
+function sceneKey(project,scene){return `${project}_${scene}`;}
+
+function toggleScene(project,scene){
+const key=sceneKey(project,scene);
+state[key]=!state[key];
+applyState();
+saveState();
+}
+
+function applyState(){
+document.querySelectorAll("[data-scene]").forEach(el=>{
+const key=sceneKey(el.dataset.project,el.dataset.scene);
+el.classList.toggle("crossed",!!state[key]);
+});
+}
+
+function saveState(){
+localStorage.setItem("timeline_review_state",JSON.stringify(state));
+}
+
+const board=document.getElementById("board");
+
+projects.forEach(project=>{
+const projectWrap=document.createElement("div");
+projectWrap.className="project";
+
+const title=document.createElement("div");
+title.className="project-title";
+title.textContent=project;
+projectWrap.appendChild(title);
+
+const timeline=document.createElement("div");
+timeline.className="timeline";
+
+for(let i=1;i<=60;i++){
+
+const gif=`gifs/${project}/${project}_${i}.gif`;
+const start=`frames/${project}/${project}_${i}_start.jpg`;
+const end=`frames/${project}/${project}_${i}_end.jpg`;
+
+const scene=document.createElement("div");
+scene.className="scene";
+scene.dataset.project=project;
+scene.dataset.scene=i;
+
+const header=document.createElement("div");
+header.className="scene-header";
+header.textContent=String(i).padStart(3,"0");
+
+const gifWrap=document.createElement("div");
+gifWrap.className="gif";
+
+const gifImg=document.createElement("img");
+gifImg.src=gif;
+gifImg.onerror=()=>scene.remove();
+
+gifWrap.appendChild(gifImg);
+
+const preview=document.createElement("div");
+preview.className="preview";
+
+const startImg=document.createElement("img");
+startImg.src=start;
+
+const endImg=document.createElement("img");
+endImg.src=end;
+
+preview.appendChild(startImg);
+preview.appendChild(endImg);
+
+scene.onclick=()=>toggleScene(project,i);
+
+scene.appendChild(header);
+scene.appendChild(gifWrap);
+scene.appendChild(preview);
+
+timeline.appendChild(scene);
+}
+
+projectWrap.appendChild(timeline);
+board.appendChild(projectWrap);
+});
+
+applyState();
+
+const viewport=document.getElementById("viewport");
+const canvas=document.getElementById("canvas");
+const zoomLabel=document.getElementById("zoomLabel");
+
+let scale=1,x=0,y=0,dragging=false,startX=0,startY=0;
+
+function updateTransform(){
+canvas.style.transform=`translate(${x}px, ${y}px) scale(${scale})`;
+zoomLabel.textContent=Math.round(scale*100)+"%";
+}
+
+viewport.addEventListener("mousedown",e=>{
+if(e.target.tagName==="IMG"){dragging=false;return;}
+dragging=true;
+viewport.classList.add("dragging");
+startX=e.clientX-x;
+startY=e.clientY-y;
+});
+
+window.addEventListener("mouseup",()=>{
+dragging=false;
+viewport.classList.remove("dragging");
+});
+
+window.addEventListener("mousemove",e=>{
+if(!dragging)return;
+x=e.clientX-startX;
+y=e.clientY-startY;
+updateTransform();
+});
+
+viewport.addEventListener("wheel",e=>{
+e.preventDefault();
+const rect=viewport.getBoundingClientRect();
+const mouseX=e.clientX-rect.left;
+const mouseY=e.clientY-rect.top;
+const worldX=(mouseX-x)/scale;
+const worldY=(mouseY-y)/scale;
+const zoom=e.deltaY<0?1.1:0.9;
+scale*=zoom;
+scale=Math.max(0.2,Math.min(scale,4));
+x=mouseX-worldX*scale;
+y=mouseY-worldY*scale;
+updateTransform();
+},{passive:false});
+
+function zoomIn(){scale*=1.1;updateTransform();}
+function zoomOut(){scale*=0.9;updateTransform();}
+function resetView(){scale=1;x=0;y=0;updateTransform();}
+updateTransform();
+</script>
+</body>
+</html>
