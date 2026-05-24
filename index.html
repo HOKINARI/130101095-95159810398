@@ -18,8 +18,24 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#d6d6d6;fon
 .scene-header{text-align:center;font-size:14px;font-weight:bold;margin-bottom:8px;}
 .gif{width:220px;position:relative;cursor:pointer;margin-bottom:6px;}
 .gif img{width:100%;display:block;}
-.preview{width:220px;display:flex;flex-direction:row;gap:0;}
-.preview img{width:110px;height:62px;object-fit:cover;display:block;}
+
+.preview{
+    width:220px;
+    display:flex;
+    flex-direction:row;
+    gap:0;
+    align-items:flex-start;
+    background:#111;
+}
+
+.preview img{
+    width:110px;
+    height:auto;
+    object-fit:contain;
+    display:block;
+    background:#111;
+}
+
 .crossed{opacity:0.45;}
 .crossed::before,.crossed::after{content:"";position:absolute;left:-10%;top:50%;width:120%;height:5px;background:red;z-index:999;pointer-events:none;}
 .crossed::before{transform:rotate(26deg);}
@@ -43,7 +59,7 @@ button{border:none;border-radius:8px;padding:10px 14px;font-weight:bold;cursor:p
 <script>
 const projects=[
 "Main_dostoevskaya_06",
-"Main_Fotonica_v12_21.05",
+"Main_Fotonica_v12 21.05",
 "Main_Kotelnaya_v8",
 "Main_Sklif_V7",
 "Main_techcollege_04",
